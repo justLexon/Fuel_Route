@@ -1,5 +1,7 @@
-import { Container, Title } from "@mantine/core";
+import { Container, Stack, Title } from "@mantine/core";
+import ManualLocation from "@/components/ManualLocation";
 import UserLocation from "@/components/UserLocation";
+import VehicleSelect from "@/components/VehicleSelect";
 
 export default function Home() {
   return (
@@ -7,7 +9,11 @@ export default function Home() {
       <Title order={1} mb="md">
         Fuel Route
       </Title>
-      <UserLocation />
+      <Stack gap="xl">
+        <UserLocation />
+        <ManualLocation />
+        <VehicleSelect />
+      </Stack>
     </Container>
   );
 }
