@@ -1,7 +1,6 @@
 import { Container, Stack, Title } from "@mantine/core";
-import ManualLocation from "@/components/ManualLocation";
-import UserLocation from "@/components/UserLocation";
-import VehicleSelect from "@/components/VehicleSelect";
+import LocationSection from "@/components/LocationSection";
+import VehiclePicker from "@/components/VehiclePicker";
 
 export default function Home() {
   return (
@@ -10,9 +9,8 @@ export default function Home() {
         Fuel Route
       </Title>
       <Stack gap="xl">
-        <UserLocation />
-        <ManualLocation />
-        <VehicleSelect />
+        <VehiclePicker />
+        <LocationSection />
       </Stack>
     </Container>
   );

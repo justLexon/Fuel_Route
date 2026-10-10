@@ -14,7 +14,11 @@ import {
 
 // Year -> Make -> Model -> Engine/Trim dropdowns. Each one unlocks after the
 // one before it is picked, and changing one clears everything after it.
-export default function VehicleSelect() {
+export default function VehicleSelect({
+  onSelect,
+}: {
+  onSelect: (vehicle: Vehicle | null) => void;
+}) {
   const [years, setYears] = useState<MenuItem[]>([]);
   const [makes, setMakes] = useState<MenuItem[]>([]);
   const [models, setModels] = useState<MenuItem[]>([]);
@@ -43,6 +47,7 @@ export default function VehicleSelect() {
     setModels([]);
     setOptions([]);
     setVehicle(null);
+    onSelect(null);
     if (value) {
       getMakes(value)
         .then(setMakes)
@@ -57,6 +62,7 @@ export default function VehicleSelect() {
     setModels([]);
     setOptions([]);
     setVehicle(null);
+    onSelect(null);
     if (year && value) {
       getModels(year, value)
         .then(setModels)
@@ -69,6 +75,7 @@ export default function VehicleSelect() {
     setOptionId(null);
     setOptions([]);
     setVehicle(null);
+    onSelect(null);
     if (year && make && value) {
       getOptions(year, make, value)
         .then(setOptions)
@@ -79,9 +86,13 @@ export default function VehicleSelect() {
   function handleOption(value: string | null) {
     setOptionId(value);
     setVehicle(null);
+    onSelect(null);
     if (value) {
       getVehicle(value)
-        .then(setVehicle)
+        .then((result) => {
+          setVehicle(result);
+          onSelect(result);
+        })
         .catch(() => setError("Couldn't load vehicle details."));
     }
   }

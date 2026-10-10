@@ -2,17 +2,24 @@
 
 import { useState } from "react";
 import { Button, Group, Text, TextInput } from "@mantine/core";
+import type { LatLng } from "@/lib/location";
 
 type Result =
   | { status: "idle" }
   | { status: "loading" }
-  | { status: "success"; lat: number; lng: number; address: string }
   | { status: "error"; message: string };
 
-// Lets the user type an address (e.g. if they declined GPS, or want to
-// search somewhere else) and shows the coordinates it resolves to.
-export default function ManualLocation() {
-  const [address, setAddress] = useState("");
+// Address search box. Filled in automatically from GPS when the user allows
+// location, otherwise left empty for them to type in.
+export default function ManualLocation({
+  address,
+  onAddressChange,
+  onLocation,
+}: {
+  address: string;
+  onAddressChange: (address: string) => void;
+  onLocation: (location: LatLng) => void;
+}) {
   const [result, setResult] = useState<Result>({ status: "idle" });
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -30,7 +37,8 @@ export default function ManualLocation() {
         return;
       }
 
-      setResult({ status: "success", ...data });
+      setResult({ status: "idle" });
+      onLocation({ lat: data.lat, lng: data.lng });
     } catch {
       setResult({ status: "error", message: "Couldn't reach the server." });
     }
@@ -40,10 +48,10 @@ export default function ManualLocation() {
     <form onSubmit={handleSubmit}>
       <Group align="flex-end">
         <TextInput
-          label="Or enter an address"
+          label="Location"
           placeholder="City, ZIP, or street address"
           value={address}
-          onChange={(event) => setAddress(event.currentTarget.value)}
+          onChange={(event) => onAddressChange(event.currentTarget.value)}
           style={{ flex: 1 }}
         />
         <Button type="submit" loading={result.status === "loading"}>
@@ -57,13 +65,6 @@ export default function ManualLocation() {
         </Text>
       )}
 
-      {result.status === "success" && (
-        <Text mt="sm">
-          {result.address}
-          <br />
-          {result.lat.toFixed(5)}, {result.lng.toFixed(5)}
-        </Text>
-      )}
     </form>
   );
 }
