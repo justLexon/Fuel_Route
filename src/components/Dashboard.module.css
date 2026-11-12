@@ -1,0 +1,126 @@
+.dashboard {
+  --dashboard-bg: #0b1220;
+  --dashboard-panel: #121e30;
+  --dashboard-border: #28374c;
+  --dashboard-text: #eef5ff;
+  --dashboard-muted: #a3b3c9;
+  --dashboard-accent: #51d8cf;
+  min-height: 100dvh;
+  background: var(--dashboard-bg);
+  color: var(--dashboard-text);
+  /* Mantine variables are scoped to this page, not the application provider. */
+  --mantine-color-text: var(--dashboard-text);
+  --mantine-color-dimmed: var(--dashboard-muted);
+  --mantine-primary-color-filled: #51d8cf;
+  --mantine-primary-color-filled-hover: #72e2db;
+}
+
+.shell { max-width: 1440px; margin: 0 auto; padding: 0 48px 32px; }
+.header { padding: 15px 0; border-bottom: 1px solid var(--dashboard-border); }
+.logo {
+  display: grid;
+  place-items: center;
+  width: 35px;
+  height: 35px;
+  border-radius: 10px;
+  background: var(--dashboard-accent);
+  color: #062c2a;
+  font-size: 21px;
+  font-weight: 800;
+}
+.brand { font-size: 23px; font-weight: 800; letter-spacing: -1px; }
+.brandAccent { color: var(--dashboard-accent); }
+.intro { margin: 20px 0 18px; }
+.headline { font-size: 30px; line-height: 1.2; letter-spacing: -1px; margin: 0 0 6px; }
+.description { font-size: 14px; color: var(--dashboard-muted); }
+.workspace { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 18px; align-items: start; }
+.sidebar { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.panel { background: var(--dashboard-panel); border: 1px solid var(--dashboard-border); border-radius: 12px; padding: 16px; overflow-wrap: anywhere; }
+.panelTitle { display: flex; align-items: center; gap: 6px; font-size: 16px; margin: 0 0 12px; line-height: 1.5; }
+.step { display: inline-grid; place-items: center; flex-shrink: 0; width: 24px; height: 24px; border: 1px solid var(--dashboard-border); border-radius: 7px; color: var(--dashboard-accent); font-size: 12px; font-weight: 500; }
+.hint { font-size: 12px; color: var(--dashboard-muted); margin-top: 12px; }
+.mapFrame { min-width: 0; border: 1px solid var(--dashboard-border); border-radius: 16px; overflow: hidden; background: var(--dashboard-panel); }
+.map { height: clamp(420px, 65dvh, 680px); width: 100%; isolation: isolate; }
+.dashboard :where(button, input, a, select, [tabindex]):focus-visible { outline: 3px solid var(--dashboard-accent); outline-offset: 3px; }
+
+@media (max-width: 1000px) {
+  .shell { padding: 0 24px 28px; }
+  .workspace { grid-template-columns: 260px minmax(0, 1fr); gap: 14px; }
+}
+@media (max-width: 700px) {
+  .shell { padding: 0 16px 24px; }
+  .header { padding: 14px 0; }
+  .intro { margin: 18px 0; }
+  .headline { font-size: 27px; }
+  .workspace { grid-template-columns: minmax(0, 1fr); }
+  .map { height: 340px; }
+}
+
+/* Stage 2: scoped controls, including the modal and portalled dropdowns. */
+.vehicleIllustration { display: block; width: 100%; height: 54px; color: #51d8cf; }
+.vehicleDetails { min-width: 0; overflow-wrap: anywhere; }
+.vehicleName { font-size: 18px; line-height: 1.4; font-weight: 700; }
+.vehicleFuel { color: #51d8cf; font-size: 13px; margin-top: 6px; }
+.vehicleHint { color: #a3b3c9; font-size: 13px; line-height: 1.5; }
+.panelAction {
+  --button-bg: #51d8cf;
+  --button-hover: #72e2db;
+  --button-color: #062c2a;
+  --button-hover-color: #062c2a;
+  min-height: 44px;
+  border-radius: 9px;
+  font-weight: 700;
+}
+.panelAction:not(:disabled):not([data-disabled]) { background: #51d8cf; color: #062c2a; }
+.panelAction:not(:disabled):not([data-disabled]):hover { background: #72e2db; }
+.panelAction:disabled, .panelAction[data-disabled] { background: #28374c; color: #a3b3c9; }
+.controlLabel { color: #eef5ff; font-size: 12px; font-weight: 600; margin-bottom: 7px; }
+.controlInput {
+  background: #0b1220;
+  border: 1px solid #43536a;
+  color: #eef5ff;
+  border-radius: 8px;
+  min-height: 44px;
+  min-width: 0;
+  width: 100%;
+  padding-inline-start: 12px;
+  padding-inline-end: 36px;
+}
+.controlInput::placeholder { color: #a3b3c9; opacity: 1; }
+.controlInput:focus { border-color: #51d8cf; }
+.controlInput:disabled, .controlInput[data-disabled] { background: #182335; color: #a3b3c9; border-color: #28374c; }
+.vehicleModal { background: #121e30; color: #eef5ff; border: 1px solid #28374c; }
+.vehicleModalHeader { background: #121e30; color: #eef5ff; padding-bottom: 18px; }
+.vehicleModalTitle { font-size: 20px; font-weight: 700; }
+.vehicleModalClose { color: #a3b3c9; border-radius: 7px; }
+.vehicleModalClose:hover { background: #28374c; color: #eef5ff; }
+.vehicleDropdown { background: #121e30; color: #eef5ff; border: 1px solid #43536a; border-radius: 8px; }
+.vehicleOption { border-radius: 6px; overflow-wrap: anywhere; }
+.vehicleOption:hover, .vehicleOption[data-combobox-selected] { background: #28374c; }
+.vehicleOption[data-checked] { color: #51d8cf; }
+.vehicleOption[data-combobox-disabled] { color: #a3b3c9; opacity: 0.6; }
+.vehicleModal :where(button, input, [tabindex]):focus-visible,
+.vehicleDropdown :where([tabindex]):focus-visible,
+.controlInput:focus-visible, .panelAction:focus-visible {
+  outline: 3px solid #51d8cf;
+  outline-offset: 3px;
+}
+
+/* Stage 3: real station results; no prices or ranking implied. */
+.stationResults { margin-top: 24px; }
+.resultsTitle { font-size: 20px; margin-bottom: 14px; }
+.stationGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.stationCard { display: flex; flex-direction: column; min-width: 0; padding: 18px; background: var(--dashboard-panel); border: 1px solid var(--dashboard-border); border-radius: 12px; overflow-wrap: anywhere; }
+.stationName { color: var(--dashboard-text); font-size: 17px; line-height: 1.4; margin-bottom: 7px; }
+.stationAddress { color: var(--dashboard-muted); font-size: 13px; margin-bottom: 16px; }
+.stationDistance { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--dashboard-border); color: var(--dashboard-accent); font-size: 20px; font-weight: 650; }
+.distanceLabel { display: block; margin-top: 3px; color: var(--dashboard-muted); font-size: 11px; font-weight: 400; }
+.resultsMessage { padding: 18px; background: var(--dashboard-panel); border: 1px solid var(--dashboard-border); border-radius: 12px; overflow-wrap: anywhere; }
+.showMore { display: block; margin: 18px auto 0; }
+@media (max-width: 1000px) { .stationGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 700px) { .stationGrid { grid-template-columns: minmax(0, 1fr); } }
+
+/* Step B: native station actions; map announcements do not move keyboard focus. */
+.stationMapAction { margin-top: 16px; align-self: flex-start; }
+.stationMapAction:focus-visible { outline: 3px solid #51d8cf; outline-offset: 3px; }
+.mapAnnouncement { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }

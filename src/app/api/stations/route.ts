@@ -4,6 +4,7 @@
 // https://wiki.openstreetmap.org/wiki/Overpass_API
 
 import { SEARCH_RADIUS_MILES, type Station } from "@/lib/stations";
+import { formatStationAddress } from "@/lib/stationAddress";
 
 const OVERPASS_SERVERS = [
   "https://overpass-api.de/api/interpreter",
@@ -75,8 +76,6 @@ function toStation(element: OverpassElement): Station | null {
   if (lat === undefined || lng === undefined) return null;
 
   const tags = element.tags ?? {};
-  const street = [tags["addr:housenumber"], tags["addr:street"]].filter(Boolean).join(" ");
-  const address = [street, tags["addr:city"]].filter(Boolean).join(", ");
 
   return {
     id: `${element.type}/${element.id}`,
@@ -84,7 +83,7 @@ function toStation(element: OverpassElement): Station | null {
     brand: tags.brand ?? null,
     lat,
     lng,
-    address: address || null,
+    address: formatStationAddress(tags),
     fuels: Object.entries(tags)
       .filter(([key, value]) => key.startsWith("fuel:") && value === "yes")
       .map(([key]) => key.slice("fuel:".length)),
