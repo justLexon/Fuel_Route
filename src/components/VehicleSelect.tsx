@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { Select, Stack, Text } from "@mantine/core";
+import styles from "./Dashboard.module.css";
+
 import {
   getMakes,
   getModels,
@@ -11,6 +13,14 @@ import {
   type MenuItem,
   type Vehicle,
 } from "@/lib/fuelEconomy";
+
+// Explicit classes also style the dropdown when Mantine renders it in a portal.
+const selectClassNames = {
+  input: styles.controlInput,
+  label: styles.controlLabel,
+  dropdown: styles.vehicleDropdown,
+  option: styles.vehicleOption,
+};
 
 // Year -> Make -> Model -> Engine/Trim dropdowns. Each one unlocks after the
 // one before it is picked, and changing one clears everything after it.
@@ -101,8 +111,9 @@ export default function VehicleSelect({
     items.map((item) => ({ value: item.value, label: item.text }));
 
   return (
-    <Stack gap="sm">
+    <Stack gap="md">
       <Select
+        classNames={selectClassNames}
         label="Year"
         placeholder="Pick a year"
         data={toData(years)}
@@ -111,6 +122,7 @@ export default function VehicleSelect({
         searchable
       />
       <Select
+        classNames={selectClassNames}
         label="Make"
         placeholder="Pick a make"
         data={toData(makes)}
@@ -120,6 +132,7 @@ export default function VehicleSelect({
         searchable
       />
       <Select
+        classNames={selectClassNames}
         label="Model"
         placeholder="Pick a model"
         data={toData(models)}
@@ -129,6 +142,7 @@ export default function VehicleSelect({
         searchable
       />
       <Select
+        classNames={selectClassNames}
         label="Engine / Trim"
         placeholder="Pick an option"
         data={toData(options)}

@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Group, Text, TextInput } from "@mantine/core";
+import { Button, Stack, Text, TextInput } from "@mantine/core";
 import type { LatLng } from "@/lib/location";
+import styles from "./Dashboard.module.css";
 
 type Result =
   | { status: "idle" }
@@ -46,18 +47,18 @@ export default function ManualLocation({
 
   return (
     <form onSubmit={handleSubmit}>
-      <Group align="flex-end">
+      <Stack gap="sm">
         <TextInput
-          label="Location"
+          label="City, ZIP, or street address"
           placeholder="City, ZIP, or street address"
           value={address}
           onChange={(event) => onAddressChange(event.currentTarget.value)}
-          style={{ flex: 1 }}
+          classNames={{ input: styles.controlInput, label: styles.controlLabel }}
         />
-        <Button type="submit" loading={result.status === "loading"}>
-          Search
+        <Button type="submit" fullWidth className={styles.panelAction} loading={result.status === "loading"}>
+          Find fuel
         </Button>
-      </Group>
+      </Stack>
 
       {result.status === "error" && (
         <Text c="red" mt="sm">
