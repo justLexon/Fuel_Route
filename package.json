@@ -12,7 +12,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "worker:dev": "tsx watch services/worker/index.ts",
-    "worker:start": "node dist-services/services/worker/index.js"
+    "worker:start": "node dist-services/services/worker/index.js",
+    "coordinator:dev": "tsx watch services/coordinator/index.ts",
+    "coordinator:start": "node dist-services/services/coordinator/index.js"
   },
   "dependencies": {
     "@mantine/core": "^9.6.3",
