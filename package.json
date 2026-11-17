@@ -4,11 +4,15 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npm run build:web && npm run build:services",
+    "build:web": "next build",
+    "build:services": "tsc -p tsconfig.services.json",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "worker:dev": "tsx watch services/worker/index.ts",
+    "worker:start": "node dist-services/services/worker/index.js"
   },
   "dependencies": {
     "@mantine/core": "^9.6.3",
@@ -30,10 +34,12 @@
     "postcss": "^8.5.28",
     "postcss-preset-mantine": "^1.18.0",
     "postcss-simple-vars": "^7.0.1",
+    "tsx": "4.23.15",
     "typescript": "^5",
     "vitest": "^4.1.12"
   },
   "allowScripts": {
-    "unrs-resolver@1.12.2": true
+    "unrs-resolver@1.12.2": true,
+    "esbuild@0.28.2": true
   }
 }

@@ -8,7 +8,11 @@ export type Station = {
   lng: number;
   address: string | null;
   fuels: string[]; // from OSM "fuel:*=yes" tags, e.g. ["diesel", "octane_91"]; often empty
+<<<<<<< HEAD
   prices?: StationPrices; // from GasBuddy; empty when there are no prices
+=======
+   unavailableFuels?: string[];
+>>>>>>> 130464d (feat: add standalone station processing worker)
 };
 
 export type GasFuel = "regular" | "midgrade" | "premium" | "diesel" | "e85";
