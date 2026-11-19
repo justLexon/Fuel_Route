@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { test } from "vitest";
 import type { GasBuddyStation } from "./gasbuddy";
 import { attachPrices } from "./matchPrices";
 import { hasPrices, type Station } from "./stations";

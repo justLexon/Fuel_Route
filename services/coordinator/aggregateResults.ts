@@ -4,7 +4,7 @@ import {
   type RankedStation,
   type SortMode,
 } from "../../src/lib/processing";
-import { rankStations } from "../../src/lib/ranking";
+import { rankStations } from "../../src/lib/processedStationRanking";
 import type {
   CompletedBatchDispatch,
 } from "./dispatchBatches";
