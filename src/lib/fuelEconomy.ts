@@ -1,6 +1,8 @@
 // Small client for the FuelEconomy.gov vehicle API.
 // Docs: https://www.fueleconomy.gov/feg/ws/
 
+import type { GasFuel } from "./stations";
+
 const BASE_URL = "https://www.fueleconomy.gov/ws/rest/vehicle";
 
 export type MenuItem = { text: string; value: string };
@@ -11,7 +13,23 @@ export type Vehicle = {
   make: string;
   model: string;
   fuelType: string; // e.g. "Regular Gasoline", "Premium Gasoline", "Diesel", "Electricity"
+  gasFuel: GasFuel | null; // the station price to use; null if gas stations don't apply (e.g. electric)
+  mpg: number | null; // combined city/highway MPG; null if unknown
 };
+
+// FuelEconomy.gov's primary fuel type -> the GasBuddy price that fits it.
+// Flex-fuel cars list "Regular Gasoline" here (E85 is their secondary fuel).
+const GAS_FUEL_BY_FUEL_TYPE: Record<string, GasFuel> = {
+  "Regular Gasoline": "regular",
+  "Midgrade Gasoline": "midgrade",
+  "Premium Gasoline": "premium",
+  Diesel: "diesel",
+  E85: "e85",
+};
+
+export function gasFuelFor(fuelType: string | null | undefined): GasFuel | null {
+  return (fuelType && GAS_FUEL_BY_FUEL_TYPE[fuelType.trim()]) || null;
+}
 
 async function getJson(path: string) {
   const res = await fetch(`${BASE_URL}${path}`, {
@@ -58,5 +76,8 @@ export async function getVehicle(id: string): Promise<Vehicle> {
     make: data.make,
     model: data.model,
     fuelType: data.fuelType1,
+    gasFuel: gasFuelFor(data.fuelType1),
+    // comb08 is the combined MPG; it's "0" or missing when there's no rating.
+    mpg: Number(data.comb08) > 0 ? Number(data.comb08) : null,
   };
 }

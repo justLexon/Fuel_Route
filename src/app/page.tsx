@@ -1,6 +1,5 @@
 import DashboardHeader from "@/components/DashboardHeader";
 import LocationSection from "@/components/LocationSection";
-import VehiclePicker from "@/components/VehiclePicker";
 import styles from "@/components/Dashboard.module.css";
 
 export default function Home() {
@@ -8,7 +7,7 @@ export default function Home() {
     <main className={styles.dashboard}>
       <div className={styles.shell}>
         <DashboardHeader />
-        <LocationSection vehiclePanel={<VehiclePicker />} />
+        <LocationSection />
       </div>
     </main>
   );

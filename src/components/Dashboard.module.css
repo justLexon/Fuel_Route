@@ -111,16 +111,20 @@
 .resultsTitle { font-size: 20px; margin-bottom: 14px; }
 .stationGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 .stationCard { display: flex; flex-direction: column; min-width: 0; padding: 18px; background: var(--dashboard-panel); border: 1px solid var(--dashboard-border); border-radius: 12px; overflow-wrap: anywhere; }
-.stationName { color: var(--dashboard-text); font-size: 17px; line-height: 1.4; margin-bottom: 7px; }
-.stationAddress { color: var(--dashboard-muted); font-size: 13px; margin-bottom: 16px; }
-.stationDistance { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--dashboard-border); color: var(--dashboard-accent); font-size: 20px; font-weight: 650; }
-.distanceLabel { display: block; margin-top: 3px; color: var(--dashboard-muted); font-size: 11px; font-weight: 400; }
+.stationHeader { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 7px; }
+.stationName { color: var(--dashboard-text); font-size: 17px; line-height: 1.4; min-width: 0; }
+.stationAddress { color: var(--dashboard-muted); font-size: 13px; }
+.stationDistance { flex-shrink: 0; color: var(--dashboard-accent); font-size: 15px; font-weight: 650; white-space: nowrap; }
+.stationPrices { margin-top: 14px; margin-bottom: 16px; }
+.yourFuel p:last-child { color: var(--dashboard-accent); }
+.fillUpCost { margin-top: -6px; margin-bottom: 16px; color: var(--dashboard-muted); font-size: 12px; }
 .resultsMessage { padding: 18px; background: var(--dashboard-panel); border: 1px solid var(--dashboard-border); border-radius: 12px; overflow-wrap: anywhere; }
 .showMore { display: block; margin: 18px auto 0; }
 @media (max-width: 1000px) { .stationGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 700px) { .stationGrid { grid-template-columns: minmax(0, 1fr); } }
 
 /* Step B: native station actions; map announcements do not move keyboard focus. */
-.stationMapAction { margin-top: 16px; align-self: flex-start; }
+/* margin-top: auto keeps the button at the bottom so cards in a row line up. */
+.stationMapAction { margin-top: auto; align-self: flex-start; }
 .stationMapAction:focus-visible { outline: 3px solid #51d8cf; outline-offset: 3px; }
 .mapAnnouncement { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }

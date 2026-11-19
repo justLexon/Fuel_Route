@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, type RefObject } from "react";
 import type { CircleMarker as LeafletCircleMarker } from "leaflet";
 import { CircleMarker, MapContainer, Popup, TileLayer, useMap } from "react-leaflet";
 import type { LatLng } from "@/lib/location";
-import type { Station } from "@/lib/stations";
+import { GAS_FUEL_LABELS, GAS_FUELS, type Station } from "@/lib/stations";
 import { getStationDisplayName } from "@/lib/stationDisplay";
 import styles from "./Dashboard.module.css";
 import { focusStationSelection, hasStationCoordinates, type StationSelection } from "@/lib/stationSelection";
@@ -96,6 +96,13 @@ export default function LocationMap({
                 {station.address}
               </>
             )}
+            {GAS_FUELS.filter((fuel) => station.prices?.[fuel]).map((fuel) => (
+              <span key={fuel}>
+                <br />
+                {GAS_FUEL_LABELS[fuel]}: ${station.prices?.[fuel]?.price.toFixed(2)}
+                {station.prices?.[fuel]?.cash && " (cash)"}
+              </span>
+            ))}
           </Popup>
         </CircleMarker>
       ))}

@@ -7,10 +7,13 @@ import VehicleSelect from "./VehicleSelect";
 import styles from "./Dashboard.module.css";
 
 // "Select vehicle" button that opens the Year/Make/Model/Engine dropdowns in a
-// modal, then shows the chosen vehicle on the main page.
-export default function VehiclePicker() {
+// modal, then shows the chosen vehicle on the main page. The vehicle itself is
+// held by the parent, which uses its fuel type to rank stations.
+export default function VehiclePicker({ vehicle, onVehicleChange }: {
+  vehicle: Vehicle | null;
+  onVehicleChange: (vehicle: Vehicle | null) => void;
+}) {
   const [opened, setOpened] = useState(false);
-  const [vehicle, setVehicle] = useState<Vehicle | null>(null);
 
   return (
     <>
@@ -27,7 +30,9 @@ export default function VehiclePicker() {
               {[vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(" ") || "Selected vehicle"}
             </Text>
             <Text className={vehicle.fuelType?.trim() ? styles.vehicleFuel : styles.vehicleHint}>
-              {vehicle.fuelType?.trim() ? `Fuel type: ${vehicle.fuelType}` : "Fuel information unavailable"}
+              {vehicle.fuelType?.trim()
+                ? `Fuel type: ${vehicle.fuelType}${vehicle.mpg ? ` · ${vehicle.mpg} MPG` : ""}`
+                : "Fuel information unavailable"}
             </Text>
           </div>
         ) : (
@@ -53,7 +58,7 @@ export default function VehiclePicker() {
           close: styles.vehicleModalClose,
         }}
       >
-        <VehicleSelect onSelect={setVehicle} />
+        <VehicleSelect onSelect={onVehicleChange} />
         <Button mt="lg" fullWidth className={styles.panelAction} disabled={!vehicle} onClick={() => setOpened(false)}>
           Done
         </Button>
