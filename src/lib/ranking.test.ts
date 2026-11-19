@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { test } from "vitest";
 import { gasFuelFor } from "./fuelEconomy";
 import { DEFAULT_MPG, FILL_UP_GALLONS, rankStations } from "./ranking";
 import type { StationPrices, Station } from "./stations";

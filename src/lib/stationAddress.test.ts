@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { test } from "vitest";
 import { formatStationAddress } from "./stationAddress";
 
 test("complete street address includes city, state, and postcode", () => {

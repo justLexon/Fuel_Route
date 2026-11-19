@@ -144,6 +144,9 @@ function toStation(element: OverpassElement): Station | null {
   if (lat === undefined || lng === undefined) return null;
 
   const tags = element.tags ?? {};
+  const fuelTags = Object.entries(tags).filter(([key]) =>
+    key.startsWith("fuel:")
+  );
 
   return {
     id: `${element.type}/${element.id}`,
@@ -152,8 +155,11 @@ function toStation(element: OverpassElement): Station | null {
     lat,
     lng,
     address: formatStationAddress(tags),
-    fuels: Object.entries(tags)
-      .filter(([key, value]) => key.startsWith("fuel:") && value === "yes")
+    fuels: fuelTags
+      .filter(([, value]) => value === "yes")
+      .map(([key]) => key.slice("fuel:".length)),
+    unavailableFuels: fuelTags
+      .filter(([, value]) => value === "no")
       .map(([key]) => key.slice("fuel:".length)),
   };
 }
