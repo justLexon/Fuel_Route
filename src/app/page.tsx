@@ -1,13 +1,14 @@
-import { Container, Title } from "@mantine/core";
-import UserLocation from "@/components/UserLocation";
+import DashboardHeader from "@/components/DashboardHeader";
+import LocationSection from "@/components/LocationSection";
+import styles from "@/components/Dashboard.module.css";
 
 export default function Home() {
   return (
-    <Container size="sm" py="xl">
-      <Title order={1} mb="md">
-        Fuel Route
-      </Title>
-      <UserLocation />
-    </Container>
+    <main className={styles.dashboard}>
+      <div className={styles.shell}>
+        <DashboardHeader />
+        <LocationSection />
+      </div>
+    </main>
   );
 }
