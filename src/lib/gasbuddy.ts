@@ -82,6 +82,11 @@ async function loadMapTile(browser: Browser, lat: number, lng: number, fuel: Gas
     (res) => res.url().endsWith("/gaspricemap/map") && res.request().method() === "POST",
     { timeout: MAP_TIMEOUT_MS }
   );
+
+  // Navigation can fail before this promise is awaited. Mark it handled
+  // immediately while preserving its rejection for the later await.
+  mapResponse.catch(() => {});
+
   // Only wait for the page to start loading; the full load (ads, trackers) can
   // take over 30 s, and all we need is the map request above.
   await page.goto(
