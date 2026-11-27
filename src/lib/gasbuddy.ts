@@ -6,7 +6,9 @@
 // When PRICE_SERVICE_URL is set, the same lookup runs on our EC2 price service
 // instead (see _docs/price-service-ec2.md), and this machine needs no Chrome.
 
-import { chromium, type Browser } from "playwright-core";
+// Type only: Playwright itself is loaded on demand below, since it can't load
+// on Vercel (it isn't fully bundled there) and isn't needed with the service.
+import type { Browser } from "playwright-core";
 import type { GasFuel, StationPrices } from "./stations";
 
 export type GasBuddyStation = {
@@ -38,6 +40,10 @@ export async function getGasBuddyPrices(lat: number, lng: number): Promise<GasBu
   const serviceUrl = process.env.PRICE_SERVICE_URL?.trim();
   if (serviceUrl) return getPricesFromService(serviceUrl.replace(/\/+$/, ""), lat, lng);
 
+  // Vercel has no Chrome, so it always needs the service.
+  if (process.env.VERCEL) throw new Error("PRICE_SERVICE_URL isn't set in Vercel's environment variables");
+
+  const { chromium } = await import("playwright-core");
   const browser = await chromium.launch({ channel: "chrome", headless: false });
 
   try {

@@ -45,6 +45,10 @@ const OVERPASS_SERVERS = [
 const USER_AGENT = "FuelRoute/0.1 (CMPS 432 class project)";
 const METERS_PER_MILE = 1609.34;
 const SERVER_TIMEOUT_MS = 30_000;
+// On Vercel: a search in a new area waits for GasBuddy (up to ~90 s if EC2 is
+// slow) plus a few seconds for names, more than the default limit.
+export const maxDuration = 120;
+
 // Each cell's data covers a full search from anywhere in the cell.
 const CELL_RADIUS_MILES = cellRadiusMiles(SEARCH_RADIUS_MILES);
 
