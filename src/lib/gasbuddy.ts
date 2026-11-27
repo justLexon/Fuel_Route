@@ -3,6 +3,8 @@
 // all loading in parallel.
 // Server only. Needs Chrome installed and a visible window (GasBuddy's bot
 // check blocks hidden browsers), so it works on a dev PC but not on Vercel.
+// When PRICE_SERVICE_URL is set, the same lookup runs on our EC2 price service
+// instead (see _docs/price-service-ec2.md), and this machine needs no Chrome.
 
 import { chromium, type Browser } from "playwright-core";
 import type { GasFuel, StationPrices } from "./stations";
@@ -28,8 +30,14 @@ const FUEL_IDS: Record<GasFuel, number> = {
 const ZOOM = 12;
 const TILE_LAT_OFFSET = 0.089; // ~6 miles, half a tile's height
 const MAP_TIMEOUT_MS = 45_000;
+// One uncached map view takes the service about 1-15 s (5 fuel tabs, maybe
+// waiting for a free tab), so allow plenty.
+const SERVICE_TIMEOUT_MS = 90_000;
 
 export async function getGasBuddyPrices(lat: number, lng: number): Promise<GasBuddyStation[]> {
+  const serviceUrl = process.env.PRICE_SERVICE_URL?.trim();
+  if (serviceUrl) return getPricesFromService(serviceUrl.replace(/\/+$/, ""), lat, lng);
+
   const browser = await chromium.launch({ channel: "chrome", headless: false });
 
   try {
@@ -62,6 +70,38 @@ export async function getGasBuddyPrices(lat: number, lng: number): Promise<GasBu
   } finally {
     await browser.close();
   }
+}
+
+// Asks the EC2 price service for the same two map views the local code loads
+// (north and south of the search). Each view comes back with all fuel types.
+async function getPricesFromService(serviceUrl: string, lat: number, lng: number) {
+  const views = await Promise.allSettled(
+    [lat + TILE_LAT_OFFSET, lat - TILE_LAT_OFFSET].map(async (viewLat) => {
+      const res = await fetch(`${serviceUrl}/prices?lat=${viewLat}&lng=${lng}`, {
+        headers: { "x-price-secret": process.env.PRICE_SERVICE_SECRET ?? "" },
+        signal: AbortSignal.timeout(SERVICE_TIMEOUT_MS),
+        cache: "no-store",
+      });
+      if (!res.ok) throw new Error(`Price service returned ${res.status}`);
+      const data: { stations: GasBuddyStation[]; failedFuels: GasFuel[] } = await res.json();
+      if (data.failedFuels.length > 0) {
+        console.warn(`Price service: ${data.failedFuels.join(", ")} failed for one map view`);
+      }
+      return data.stations;
+    })
+  );
+
+  const loaded = views.flatMap((view) => (view.status === "fulfilled" ? [view.value] : []));
+  if (loaded.length === 0) throw (views[0] as PromiseRejectedResult).reason;
+  if (loaded.length < views.length) console.warn("Price service: 1 of 2 map views failed");
+
+  // The two views overlap, so merge each station's prices.
+  const byId = new Map<number, GasBuddyStation>();
+  for (const station of loaded.flat()) {
+    const existing = byId.get(station.id);
+    byId.set(station.id, existing ? { ...existing, prices: { ...existing.prices, ...station.prices } } : station);
+  }
+  return [...byId.values()];
 }
 
 type MapStation = {

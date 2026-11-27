@@ -1,5 +1,8 @@
-// A gas station from OpenStreetMap. Shared shape for the map, distance
-// calculation, prices, and ranking.
+// A gas station: location and prices from GasBuddy, plus name, brand and address
+// from OpenStreetMap when it has the station (see mergeStations). The id is
+// "gasbuddy/<id>" for GasBuddy stations, and the OSM id ("node/123") for OSM
+// stations GasBuddy doesn't have (those have no prices). Shared shape for
+// the map, distance calculation, prices, and ranking.
 export type Station = {
   id: string;
   name: string;

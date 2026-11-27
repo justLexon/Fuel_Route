@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { Button, Paper, SimpleGrid, Text, Title } from "@mantine/core";
 import type { LatLng } from "@/lib/location";
 import { GAS_FUEL_LABELS, GAS_FUELS, hasPrices, type GasFuel, type Station } from "@/lib/stations";
@@ -16,7 +15,8 @@ export default function StationCard({ station, center, highlightFuel = null, fil
 }) {
   const distance = straightLineMiles(center, station);
   const canShowOnMap = hasStationCoordinates(station);
-  const address = useStationAddress(station);
+  // Addresses missing from OSM are looked up by StationResults before the card shows.
+  const address = station.address?.trim();
 
   return (
     <Paper component="article" className={styles.stationCard}>
@@ -63,26 +63,4 @@ export default function StationCard({ station, center, highlightFuel = null, fil
       {!canShowOnMap && <Text className={styles.hint}>Map location unavailable.</Text>}
     </Paper>
   );
-}
-
-// The station's OSM address, or one looked up from its coordinates when OSM has none.
-// Only rendered cards look one up, so "Show more" loads addresses as needed.
-function useStationAddress(station: Station): string | null {
-  const own = station.address?.trim() || null;
-  const needsLookup = !own && hasStationCoordinates(station);
-  const [lookedUp, setLookedUp] = useState<{ id: string; address: string } | null>(null);
-
-  useEffect(() => {
-    if (!needsLookup) return;
-    const controller = new AbortController();
-    fetch(`/api/station-address?lat=${station.lat}&lng=${station.lng}`, { signal: controller.signal })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data?.address) setLookedUp({ id: station.id, address: data.address });
-      })
-      .catch(() => {}); // no address is fine; the card just doesn't show one
-    return () => controller.abort();
-  }, [needsLookup, station.id, station.lat, station.lng]);
-
-  return own ?? (lookedUp?.id === station.id ? lookedUp.address : null);
 }

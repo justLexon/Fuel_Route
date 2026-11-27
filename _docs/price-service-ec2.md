@@ -2,7 +2,21 @@
 
 How to move the GasBuddy price lookup off a laptop and onto an AWS EC2 server, so the hosted Fuel Route app can get prices without anyone's computer being on.
 
-**Status:** plan. Nothing here is built yet. Do [Step 4](#step-4-test-whether-gasbuddy-works-from-aws) before anything else, because it decides whether the rest is worth doing.
+**Status:** all steps are done, and the service is live (Nov 26, 2026). **GasBuddy works from AWS** ([Step 4](#step-4-test-whether-gasbuddy-works-from-aws)), and a local Fuel Route gets its prices from the service over HTTPS. What's left is adding the env vars on Vercel when the app is hosted.
+
+**Our instance:**
+
+| | |
+|---|---|
+| Name / id | `fuel-route-prices` / `i-06089c893aa151adf` |
+| Type | `c7i-flex.large`, Ubuntu 24.04, us-east-2, in Lexon's account |
+| Fixed IP | `18.119.219.9` (Elastic IP) |
+| Service URL | **`https://18-119-219-9.sslip.io`**: Caddy (HTTPS) → price service on `127.0.0.1:8080` |
+| Starts on boot | Caddy and the price service (pm2) both start by themselves. Nothing to do after starting the instance. |
+| Open ports | 443 (HTTPS) to everyone; 22 (SSH) only from Lexon's home IP |
+| Secret | In Lexon's `.env.local` as `PRICE_SERVICE_SECRET`. Ask him for it; it's never committed. |
+
+**The instance must be running for prices to load.** It costs about $2 a day while running, paid from AWS credits. Start it before testing or the demo (EC2 → Instances → Instance state → Start) and stop it afterwards. When it's stopped, Fuel Route still works, but stations show without prices.
 **Related:** [supabase-cache.md](supabase-cache.md) is the shared cache in front of this service. Together they keep GasBuddy lookups rare.
 
 ## Why this is needed
@@ -59,7 +73,7 @@ In the AWS Console, go to **EC2 → Instances → Launch instances**:
 | --- | --- |
 | Name | `fuel-route-prices` |
 | AMI | **Ubuntu Server 24.04 LTS** (64-bit **x86**, not Arm, because Google Chrome has no Arm Linux build) |
-| Instance type | **t3.medium** (4 GB RAM) for 5 tabs at once. A `t3.small` (2 GB) can work with `MAX_TABS=2`, but it's slower. `t3.micro` runs out of memory. |
+| Instance type | **c7i-flex.large** (2 CPUs, 4 GB RAM) for 5 tabs at once. Accounts on AWS's free plan, like ours, can only launch "free tier eligible" types, and `t3.medium` isn't one. A `t3.small` (2 GB) can work with `MAX_TABS=2`, but it's slower. `t3.micro` runs out of memory. |
 | Key pair | Create new → name `fuel-route` → type RSA → format `.pem`. It downloads once, so keep it safe. |
 | Storage | 16 GB gp3 |
 
@@ -68,11 +82,11 @@ Under **Network settings → Edit**, set up the security group:
 | Type | Port | Source | Why |
 | --- | --- | --- | --- |
 | SSH | 22 | **My IP** | So you can log in |
-| Custom TCP | 8080 | Anywhere (0.0.0.0/0) | So Vercel can reach the price service. Vercel has no fixed IP to allow, so the secret header from Step 5 protects it instead. |
+| HTTPS | 443 | Anywhere (0.0.0.0/0) | So Vercel can reach the price service through Caddy ([Step 7](#step-7-add-https-with-caddy)). Vercel has no fixed IP to allow, so the secret header from Step 5 protects it instead. Port 8080 stays closed. |
 
 Click **Launch instance**.
 
-**Give it a fixed IP:** EC2 → **Elastic IPs** → Allocate → then Actions → **Associate** with `fuel-route-prices`. Without this, the IP changes every time the instance stops and starts, and Fuel Route would lose track of it. (An Elastic IP is free while it's attached to a running instance, and costs a little while the instance is stopped.)
+**Give it a fixed IP:** EC2 → **Elastic IPs** → Allocate → then Actions → **Associate** with `fuel-route-prices`. Without this, the IP changes every time the instance stops and starts, and Fuel Route would lose track of it. (AWS charges about $3.60 a month for each public IPv4 address, Elastic or not.)
 
 ## Step 2: Log in with SSH
 
@@ -122,6 +136,16 @@ Check it worked: `node -v` should print `v22.x`, `google-chrome --version` shoul
 ## Step 4: Test whether GasBuddy works from AWS
 
 **This step decides everything.** Cloudflare is often stricter with data-center IPs, like AWS's, than with home internet. If GasBuddy blocks this machine, stop here and use the Supabase snapshot plan instead.
+
+> **Result (Nov 26, 2026): it works.** We ran the project's own `scripts/open-gasbuddy.mjs`, unchanged, on our instance with real Chrome:
+>
+> ```bash
+> xvfb-run -a -s "-screen 0 1920x1440x24" node open-gasbuddy.mjs 30.2020 -92.0773
+> ```
+>
+> Three runs, 20 seconds apart, all succeeded with no Cloudflare check. Each found 86 stations with prices (78 regular, 42 midgrade, 45 premium, 46 diesel; no E85 nearby) in about 10 seconds, including starting Chrome. Memory use stayed low, with about 3 GB of the 4 GB free. A price service that keeps Chrome open (Step 5) should take about 1–3 seconds per request.
+>
+> Cloudflare could still start blocking later, so re-run this test before the demo.
 
 Create `~/price-service/test-gasbuddy.mjs`:
 
@@ -201,11 +225,13 @@ Create `~/price-service/price-server.mjs`. It loads one map view for all five fu
 //   MAX_TABS        pages loading at once (default 5)
 //   BROWSER_CHANNEL "chrome" (default, Google Chrome) or "chromium" (Playwright's own)
 //   PORT            default 8080
+//   HOST            default 127.0.0.1: only Caddy, on the same machine, can connect
 
 import http from "node:http";
 import { chromium } from "playwright";
 
 const PORT = Number(process.env.PORT ?? 8080);
+const HOST = process.env.HOST ?? "127.0.0.1";
 const SECRET = process.env.PRICE_SECRET;
 const MAX_TABS = Number(process.env.MAX_TABS ?? 5);
 const BROWSER_CHANNEL = process.env.BROWSER_CHANNEL ?? "chrome";
@@ -371,7 +397,7 @@ http
       send(res, 502, { error: "Couldn't load GasBuddy prices." });
     }
   })
-  .listen(PORT, () => console.log(`Price service on port ${PORT}, up to ${MAX_TABS} tabs`));
+  .listen(PORT, HOST, () => console.log(`Price service on ${HOST}:${PORT}, up to ${MAX_TABS} tabs`));
 ```
 
 Make up a long random secret. For example, run this on the server and copy the output:
@@ -386,10 +412,10 @@ Try the service in the foreground first:
 PRICE_SECRET=<your-secret> xvfb-run -a -s "-screen 0 1920x1440x24" node price-server.mjs
 ```
 
-Then, from your **laptop**, in a second terminal:
+Then, in a **second SSH session** to the server. The service only accepts connections from the machine itself until Caddy is set up in Step 7:
 
-```powershell
-curl.exe -H "x-price-secret: <your-secret>" "http://<ELASTIC-IP>:8080/prices?lat=30.2020&lng=-92.0773"
+```bash
+curl -H "x-price-secret: <your-secret>" "http://localhost:8080/prices?lat=30.2020&lng=-92.0773"
 ```
 
 You should get `{"stations":[...],"failedFuels":[]}` back. Run the same command again right away: it should answer instantly from the 5-minute cache, and the server log should show a few milliseconds.
@@ -402,7 +428,9 @@ For reference, this code was tested on a Windows laptop with Google Chrome (Lafa
 | Same view, 2 requests at once | Loaded once; both got the answer at about 3 s |
 | Same view again | From cache, a few ms |
 | A different view (reused tabs) | About 1 s |
-| No secret | `401` | Stop the server with Ctrl+C when you're done.
+| No secret | `401` |
+
+Stop the server with Ctrl+C when you're done.
 
 ## Step 6: Keep it running with pm2
 
@@ -431,14 +459,50 @@ Useful commands:
 
 To change the secret later: `pm2 delete price-service`, run the `pm2 start` line again with the new value, then `pm2 save`.
 
-## Step 7: Point Fuel Route at the service
+## Step 7: Add HTTPS with Caddy
+
+Without HTTPS, the secret header would cross the internet readable by anyone in between. **Caddy** is a small web server that gets a free HTTPS certificate from Let's Encrypt and renews it by itself. It receives HTTPS on port 443 and passes requests on to the price service on `127.0.0.1:8080`.
+
+A certificate needs a hostname, not a bare IP. **sslip.io** gives every IP one for free with no signup: `18-119-219-9.sslip.io` points to `18.119.219.9`. (A real domain works the same way if we ever buy one.)
+
+```bash
+# Install Caddy from its official package repository
+sudo apt-get install -y debian-keyring debian-archive-keyring apt-transport-https curl gnupg
+curl -1sLf https://dl.cloudsmith.io/public/caddy/stable/gpg.key | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+curl -1sLf https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt | sudo tee /etc/apt/sources.list.d/caddy-stable.list
+sudo apt-get update && sudo apt-get install -y caddy
+
+# Replace the default config. Use your Elastic IP with dashes.
+sudo tee /etc/caddy/Caddyfile <<'EOF'
+# Fuel Route price service: HTTPS on 443, passed to the service on localhost:8080.
+18-119-219-9.sslip.io {
+	reverse_proxy 127.0.0.1:8080
+}
+EOF
+sudo systemctl reload caddy
+```
+
+Caddy installs as a system service, so it starts on boot. Only port 443 needs to be open. Caddy gets its certificate over 443, so port 80 can stay closed.
+
+Test from your **laptop**:
+
+```powershell
+curl.exe https://18-119-219-9.sslip.io/health
+curl.exe -H "x-price-secret: <your-secret>" "https://18-119-219-9.sslip.io/prices?lat=30.2020&lng=-92.0773"
+```
+
+The first should print `{"status":"ok",...}`, and the second the stations. `curl.exe http://18.119.219.9:8080/health` should time out, which confirms the service itself isn't exposed.
+
+## Step 8: Point Fuel Route at the service
 
 **1. Environment variables.** Add these locally in `.env.local` (git-ignored) and in Vercel under **Project → Settings → Environment Variables**:
 
 ```
-PRICE_SERVICE_URL=http://<ELASTIC-IP>:8080
+PRICE_SERVICE_URL=https://18-119-219-9.sslip.io
 PRICE_SERVICE_SECRET=<your-secret>
 ```
+
+On Vercel, also make sure the stations route can run long enough. A search whose prices aren't cached takes about 5–15 seconds. If your plan's default limit is shorter, add `export const maxDuration = 60;` to `src/app/api/stations/route.ts`.
 
 **2. Before Supabase exists: call the service from `gasbuddy.ts`.** Use the service when `PRICE_SERVICE_URL` is set, and fall back to local Chrome otherwise, so it still works on a laptop. It asks for the same two map views the local code loads (north and south of the search). This goes at the top of `getGasBuddyPrices`, with the helper below it:
 
@@ -488,7 +552,9 @@ The service returns stations in the same `GasBuddyStation` shape as the local co
 | `Just a moment...` or no map data in Step 4 | Cloudflare blocks AWS IPs | Try `chromium` vs `chrome`. If both fail, use the Supabase snapshot plan. |
 | `Missing X server or $DISPLAY` | Started without `xvfb-run` | Start with the full `xvfb-run -a -s ...` command |
 | `Chromium distribution 'chrome' is not found` | Chrome isn't installed | `npx playwright install --with-deps chrome`, or set `BROWSER_CHANNEL=chromium` |
-| `curl` from laptop hangs or times out | Port 8080 isn't open | Check the security group rule from Step 1 |
+| HTTPS `curl` from laptop hangs or times out | Instance stopped, or port 443 isn't open | Start the instance; check the security group rule from Step 1 |
+| Certificate or TLS error | Caddy couldn't get a certificate | `sudo journalctl -u caddy -n 50` on EC2. The Caddyfile hostname must match the Elastic IP |
+| `502 Bad Gateway` from the HTTPS URL | Caddy is up but the price service isn't | `pm2 status`, then `pm2 logs price-service` |
 | `401 Unauthorized` | Secret doesn't match | Same value in `PRICE_SECRET` (EC2) and `PRICE_SERVICE_SECRET` (Vercel) |
 | `Couldn't load GasBuddy prices` | GasBuddy slow, or its page changed | Check `pm2 logs`, then run `test-gasbuddy.mjs` again and look at the screenshot |
 | Some fuels in `failedFuels` | Those page loads timed out | Fine now and then. If constant, lower `MAX_TABS` |
@@ -499,7 +565,8 @@ The service returns stations in the same `GasBuddyStation` shape as the local co
 
 ## Security notes
 
-- The secret travels over plain HTTP. That's acceptable for a class demo, but anyone watching the network between Vercel and EC2 could see it. Putting the service behind HTTPS, for example with Caddy and a domain name, would fix that.
+- The secret only travels over HTTPS (Caddy), and the price service itself only listens on `127.0.0.1`. Port 8080 is closed in the security group as well.
+- The HTTPS URL is public, so the secret is what keeps others out. If it leaks, change it (Step 6) and update `.env.local` and Vercel.
 - Don't commit the secret or the `.pem` key to git.
 - Keep SSH (port 22) limited to **My IP**.
 
