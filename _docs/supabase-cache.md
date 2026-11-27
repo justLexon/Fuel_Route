@@ -1,6 +1,17 @@
 # Supabase cache plan
 
-**Status:** plan, not built yet.
+**Status:** built. The schema is [supabase/schema.sql](../supabase/schema.sql). The code is in `src/lib/supabase.ts`, `src/lib/cells.ts`, `src/lib/cacheStore.ts` and the two API routes. It's on once `SUPABASE_URL` and `SUPABASE_SECRET_KEY` are set; without them the app uses only the memory cache.
+
+**Differences from the plan below:**
+- **One grid size, 0.05° (about 3.5 × 3 mi), for both stations and prices.** Each cell's data is loaded around the cell's center with a 12.5-mile radius (10-mile search plus a 2.5-mile margin), so one Overpass query and one 2-view GasBuddy scrape cover any search from inside the cell.
+- **OSM stations are in `osm_stations` and read by bounding box,** so there's no `cell` column on them.
+- **Prices are a `prices` jsonb column on `gasbuddy_stations`** instead of a separate table.
+- **Looked-up addresses have their own table, `addresses`,** keyed by the point (5 decimals), so they also cover GasBuddy-only stations, and an Overpass refresh can't overwrite them.
+- **Claiming is done by the `claim_price_cell()` SQL function.** It returns `fresh`, `busy`, `failed` or `claimed`.
+- **The memory cache keeps stations for 1 hour.** Prices stay until 30 minutes after their scrape.
+- **Supabase is used through its REST API with `fetch`,** with no client library. If Supabase is down, searches fall back to scraping directly.
+
+The original plan follows.
 **Goal:** stop calling Overpass, GasBuddy and Nominatim on every search. All users share one cache in Supabase, so a search someone already ran nearby is fast and costs no outside lookups.
 
 ## Why
@@ -151,7 +162,7 @@ With Supabase, save the result to `stations.address` and set `address_looked_up 
 
 ### Matching
 
-Match GasBuddy stations to OSM stations **at read time** with the current `attachPrices` (nearest within 0.06 mi). We don't store the match, because either side can change when it's refreshed. Matching about 100 stations takes well under a millisecond.
+Match GasBuddy stations to OSM stations **at read time** with the current `mergeStations` in `src/lib/matchPrices.ts` (nearest within 0.06 mi, one-to-one). We don't store the match, because either side can change when it's refreshed. Matching about 100 stations takes well under a millisecond.
 
 Names and brands come only from OSM. GasBuddy's map data includes a `brand_id`, but it's always 0, so there's nothing to learn from it.
 

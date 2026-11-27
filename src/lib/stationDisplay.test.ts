@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { test } from "vitest";
 import { getStationDisplayName } from "./stationDisplay";
 
 test("actual name takes precedence over a valid brand", () => {

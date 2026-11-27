@@ -4,15 +4,24 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npm run build:web && npm run build:services",
+    "build:web": "next build",
+    "build:services": "tsc -p tsconfig.services.json",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "worker:dev": "tsx watch services/worker/index.ts",
+    "worker:start": "node dist-services/services/worker/index.js",
+    "coordinator:dev": "tsx watch services/coordinator/index.ts",
+    "coordinator:start": "node dist-services/services/coordinator/index.js",
+    "benchmark": "node dist-services/services/benchmark/index.js"
   },
   "dependencies": {
     "@mantine/core": "^9.6.3",
     "@mantine/hooks": "^9.6.3",
     "leaflet": "^1.9.4",
-    "next": "16.3.8",
+    "next": "16.4.6",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "react-leaflet": "^5.0.0"
@@ -23,11 +32,17 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.3.8",
+    "eslint-config-next": "16.4.6",
     "playwright-core": "^1.65.1",
     "postcss": "^8.5.28",
     "postcss-preset-mantine": "^1.18.0",
     "postcss-simple-vars": "^7.0.1",
-    "typescript": "^5"
+    "tsx": "4.23.15",
+    "typescript": "^5",
+    "vitest": "^4.1.12"
+  },
+  "allowScripts": {
+    "unrs-resolver@1.12.2": true,
+    "esbuild@0.28.2": true
   }
 }
