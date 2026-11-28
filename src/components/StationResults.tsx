@@ -3,6 +3,7 @@
 import { useEffect, useId, useMemo, useState } from "react";
 import { Button, Group, Loader, Paper, SegmentedControl, Text, Title } from "@mantine/core";
 import type { Vehicle } from "@/lib/fuelEconomy";
+import type { Processing } from "@/lib/coordinator";
 import type { LatLng } from "@/lib/location";
 import { DEFAULT_MPG, FILL_UP_GALLONS, rankStations, type SortMode } from "@/lib/ranking";
 import { GAS_FUEL_LABELS, SEARCH_RADIUS_MILES, type Station } from "@/lib/stations";
@@ -46,14 +47,16 @@ type ResultProps =
       stations: Station[];
       center: LatLng;
       vehicle: Vehicle | null;
+      processing: Processing;
       onSelect: (stationId: string) => void;
     };
 
 // State lives only in the successful list, so starting another request resets it.
-function StationList({ stations, center, vehicle, onSelect }: {
+function StationList({ stations, center, vehicle, processing, onSelect }: {
   stations: Station[];
   center: LatLng;
   vehicle: Vehicle | null;
+  processing: Processing;
   onSelect: (stationId: string) => void;
 }) {
   const listId = useId();
@@ -174,6 +177,12 @@ function StationList({ stations, center, vehicle, onSelect }: {
             : `Ranked for your ${vehicle.year} ${vehicle.make} ${vehicle.model}: ${fuelLabel}, ${mpg ?? DEFAULT_MPG} MPG.`}
         {hasFuelPrices && sort === "best" && ` Best overall = cost of a ${FILL_UP_GALLONS}-gallon fill-up plus the gas to drive there and back.`}
       </Text>
+      {processing.distributed && (
+        <Text c="dimmed" size="xs" mb="md" mt={-8}>
+          Processed in parallel by {processing.workerCount} worker{processing.workerCount === 1 ? "" : "s"} ({processing.completedBatches} batches
+          {processing.retriedBatches > 0 && `, ${processing.retriedBatches} retried`}) in {Math.round(processing.totalTimeMs)} ms.
+        </Text>
+      )}
       {visible.length === 0 ? (
         <LoadingMessage />
       ) : (
@@ -221,7 +230,7 @@ export default function StationResults(props: ResultProps) {
         </Paper>
       )}
       {props.status === "success" && (
-        <StationList stations={props.stations} center={props.center} vehicle={props.vehicle} onSelect={props.onSelect} />
+        <StationList stations={props.stations} center={props.center} vehicle={props.vehicle} processing={props.processing} onSelect={props.onSelect} />
       )}
     </section>
   );
