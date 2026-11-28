@@ -7,6 +7,7 @@ import { useGpsLocation } from "@/hooks/useGpsLocation";
 import type { LatLng } from "@/lib/location";
 import { SEARCH_RADIUS_MILES, type Station } from "@/lib/stations";
 import type { Vehicle } from "@/lib/fuelEconomy";
+import type { Processing } from "@/lib/coordinator";
 import ManualLocation from "./ManualLocation";
 import VehiclePicker from "./VehiclePicker";
 import styles from "./Dashboard.module.css";
@@ -17,10 +18,10 @@ import { getStationDisplayName } from "@/lib/stationDisplay";
 // Leaflet touches `window`, so it can only load in the browser.
 const LocationMap = dynamic(() => import("./LocationMap"), { ssr: false });
 
-// Stations (or an error) along with the location they were loaded for.
+// Stations (or an error) along with the location and fuel they were loaded for.
 type StationResult =
-  | { location: LatLng; stations: Station[] }
-  | { location: LatLng; error: string };
+  | { location: LatLng; fuel: string; stations: Station[]; processing: Processing }
+  | { location: LatLng; fuel: string; error: string };
 
 // Holds the one location the rest of the app uses, and loads nearby stations for it.
 // - User allows GPS: center the map there and fill the search box with its address.
@@ -50,38 +51,42 @@ export default function LocationSection() {
   useGpsLocation(handleGpsLocation);
 
   const location = manualLocation ?? gpsLocation;
+  // The server's workers check fuel compatibility, so the list is loaded for
+  // the vehicle's fuel (regular when there's no vehicle or it doesn't use gas).
+  const fuel = vehicle?.gasFuel ?? "regular";
 
-  // Load stations whenever the location changes. If it changes again before
-  // the request finishes, the old request is cancelled.
+  // Load stations whenever the location or fuel changes. If either changes again
+  // before the request finishes, the old request is cancelled.
   useEffect(() => {
     if (!location) return;
     const controller = new AbortController();
 
-    fetch(`/api/stations?lat=${location.lat}&lng=${location.lng}`, {
+    fetch(`/api/stations?lat=${location.lat}&lng=${location.lng}&fuel=${fuel}`, {
       signal: controller.signal,
     })
       .then(async (res) => {
         const data = await res.json();
         setStationResult(
-          res.ok ? { location, stations: data.stations } : { location, error: data.error }
+          res.ok
+            ? { location, fuel, stations: data.stations, processing: data.processing ?? { distributed: false } }
+            : { location, fuel, error: data.error }
         );
       })
       .catch((error) => {
         if (error.name !== "AbortError") {
-          setStationResult({ location, error: "Couldn't load gas stations." });
+          setStationResult({ location, fuel, error: "Couldn't load gas stations." });
         }
       });
 
     return () => controller.abort();
-  }, [location]);
+  }, [location, fuel]);
 
-  // Only use results that belong to the current location.
-  const current = stationResult?.location === location ? stationResult : null;
+  // Only use results that belong to the current location and fuel.
+  const current = stationResult?.location === location && stationResult.fuel === fuel ? stationResult : null;
   // Only show stations (on the map and in the list) that sell the vehicle's fuel,
   // or regular when there's no vehicle or it doesn't use gas, matching the list's
   // ranking. If none do (e.g. GasBuddy is down), show them all rather than nothing.
   // Memoized because map selection compares this array by identity.
-  const fuel = vehicle?.gasFuel ?? "regular";
   const stations = useMemo(() => {
     const all = current && "stations" in current ? current.stations : [];
     const withFuel = all.filter((station) => station.prices?.[fuel]);
@@ -160,7 +165,7 @@ export default function LocationSection() {
       {!location ? <StationResults status="idle" />
         : !current ? <StationResults status="loading" />
         : "error" in current ? <StationResults status="error" error={current.error} />
-        : <StationResults status="success" stations={stations} center={current.location} vehicle={vehicle} onSelect={handleStationSelect} />}
+        : <StationResults status="success" stations={stations} center={current.location} vehicle={vehicle} processing={current.processing} onSelect={handleStationSelect} />}
     </>
   );
 }

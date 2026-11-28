@@ -1,5 +1,5 @@
 // Finds gas stations near a point.
-// Usage: GET /api/stations?lat=30.50&lng=-90.46
+// Usage: GET /api/stations?lat=30.50&lng=-90.46&fuel=regular
 // - GasBuddy is the main source: it has every station's location and prices.
 // - OpenStreetMap, through the Overpass API, adds names, brands and addresses
 //   when its servers answer in time. They're often busy, so this asks several at
@@ -8,6 +8,10 @@
 //   the default "Gas station".
 // If GasBuddy fails, the OSM stations are shown without prices.
 //
+// The finished list then goes to the distributed coordinator (src/lib/coordinator.ts),
+// whose workers process it in parallel for the vehicle's fuel and drop stations
+// that don't sell it. If the coordinator is down, the list is returned as is.
+//
 // Everything is cached per grid cell (src/lib/cells.ts), first in this server's
 // memory, then in Supabase, which all servers and users share
 // (_docs/supabase-cache.md). Station info is kept 365 days, prices 30 minutes.
@@ -15,7 +19,8 @@
 // https://wiki.openstreetmap.org/wiki/Overpass_API
 
 import { after } from "next/server";
-import { SEARCH_RADIUS_MILES, type Station } from "@/lib/stations";
+import { GAS_FUELS, SEARCH_RADIUS_MILES, type GasFuel, type Station } from "@/lib/stations";
+import { coordinatorConfigured, processWithCoordinator, type Processing } from "@/lib/coordinator";
 import { formatStationAddress } from "@/lib/stationAddress";
 import { getGasBuddyPrices, type GasBuddyStation } from "@/lib/gasbuddy";
 import type { LatLng } from "@/lib/location";
@@ -69,6 +74,11 @@ export async function GET(request: Request) {
   if (!params.get("lat") || !params.get("lng") || Number.isNaN(lat) || Number.isNaN(lng)) {
     return Response.json({ error: "Missing or invalid lat/lng." }, { status: 400 });
   }
+  const fuelParam = params.get("fuel") ?? "regular";
+  if (!GAS_FUELS.includes(fuelParam as GasFuel)) {
+    return Response.json({ error: `fuel must be one of ${GAS_FUELS.join(", ")}.` }, { status: 400 });
+  }
+  const fuel = fuelParam as GasFuel;
 
   // Distances are measured from the searched point (to ~110 m); data is loaded per cell.
   const center: LatLng = { lat: Number(lat.toFixed(3)), lng: Number(lng.toFixed(3)) };
@@ -112,7 +122,25 @@ export async function GET(request: Request) {
   const stations = mergeStations(osmStations, gasBuddy, center, SEARCH_RADIUS_MILES).filter(
     (station) => (straightLineMiles(center, station) ?? Infinity) <= SEARCH_RADIUS_MILES
   );
-  return Response.json({ stations: await withSavedAddresses(stations) });
+  const withAddresses = await withSavedAddresses(stations);
+  return Response.json(await processDistributed(withAddresses, center, fuel));
+}
+
+async function processDistributed(
+  stations: Station[],
+  center: LatLng,
+  fuel: GasFuel
+): Promise<{ stations: Station[]; processing: Processing }> {
+  if (!coordinatorConfigured() || stations.length === 0) {
+    return { stations, processing: { distributed: false } };
+  }
+  try {
+    const result = await processWithCoordinator(stations, center, fuel);
+    return { stations: result.stations, processing: { distributed: true, ...result.metrics } };
+  } catch (error) {
+    console.warn(`Coordinator failed; returning unprocessed stations: ${(error as Error).message}`);
+    return { stations, processing: { distributed: false } };
+  }
 }
 
 // How long to wait for Overpass once GasBuddy has answered.
